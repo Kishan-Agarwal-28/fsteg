@@ -364,16 +364,23 @@ jobs:
           files: fsteg.rb
 
       - name: Push to homebrew-tap repository
-        if: env.HOMEBREW_TAP_TOKEN != ''
-        uses: mislav/bump-homebrew-formula-action@v3
-        with:
-          formula-name: fsteg
-          formula-path: Formula/fsteg.rb
-          homebrew-tap: Kishan-Agarwal-28/homebrew-tap
-          tag-name: ${{ github.ref_name }}
-          download-url: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/fsteg-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' || secrets.HOMEBREW_TOKEN != '' }}
         env:
-          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.HOMEBREW_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/Kishan-Agarwal-28/homebrew-tap.git" tap-repo
+          mkdir -p tap-repo/Formula
+          cp fsteg.rb tap-repo/Formula/fsteg.rb
+          cd tap-repo
+          git add Formula/fsteg.rb
+          if git diff --staged --quiet; then
+            echo "Formula is already up to date"
+          else
+            git commit -m "Update fsteg formula to ${{ needs.release.outputs.tag }}"
+            git push origin main
+          fi
 
   # ─── 6. Chocolatey Package ─────────────────────────────────────────────────
   chocolatey:
@@ -417,7 +424,7 @@ jobs:
           files: dist-choco/*.nupkg
 
       - name: Push to Chocolatey Community
-        if: env.CHOCOLATEY_API_KEY != ''
+        if: ${{ secrets.CHOCOLATEY_API_KEY != '' }}
         shell: pwsh
         run: |
           $version = "${{ needs.release.outputs.version }}"

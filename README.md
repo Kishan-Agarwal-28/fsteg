@@ -34,7 +34,6 @@ Unlike naive spatial-domain steganography (such as LSB substitution) which can b
 - [Lossless vs. Lossy Carrier Formats](#-lossless-vs-lossy-carrier-formats)
 - [Security & Operational Best Practices](#-security--operational-best-practices)
 - [Troubleshooting & FAQs](#-troubleshooting--faqs)
-- [Project Layout](#-project-layout)
 - [License](#-license)
 
 ---
@@ -120,11 +119,11 @@ Each $8 \times 8$ block holds exactly **14 usable bits**. The coordinates select
 ### 4. Hermitian (Conjugate) Symmetry Enforcement
 Because spatial pixel values are real numbers, their Fourier transform must satisfy Hermitian symmetry:
 
-$$S[(8 - u) \pmod 8, (8 - v) \pmod 8] = S^*[u, v]$$
+$$S[(8 - u) \pmod 8, (8 - v) \pmod 8] = S^{\ast}[u, v]$$
 
-Whenever the magnitude at $(u, v)$ is altered, `fsteg` calculates the conjugate coordinate $(u^*, v^*) = ((8-u)\%8, (8-v)\%8)$ and assigns:
+Whenever the magnitude at $(u, v)$ is altered, `fsteg` calculates the conjugate coordinate $(u^{\ast}, v^{\ast}) = ((8 - u) \bmod 8, (8 - v) \bmod 8)$ and assigns:
 
-$$S[u, v] = M_{\text{new}} \cdot e^{j \phi}, \qquad S[u^*, v^*] = M_{\text{new}} \cdot e^{-j \phi}$$
+$$S[u, v] = M_{\text{new}} \cdot e^{j \phi}, \qquad S[u^{\ast}, v^{\ast}] = M_{\text{new}} \cdot e^{-j \phi}$$
 
 This prevents the Inverse FFT from producing non-zero imaginary residuals.
 
@@ -451,21 +450,6 @@ Or switch console code page: `chcp 65001`.
 **Cause:** The sentinel was discovered, but one or more bits in the payload were flipped.  
 **Common reasons:**
 - Minor spatial alterations, noise injection, or compression artifacts occurred after embedding.
-
----
-
-## 📂 Project Layout
-
-```text
-fft-steg/
-├── .gitignore             # Standard Python / uv gitignore rules
-├── .python-version        # Locked Python interpreter version (3.11+)
-├── pyproject.toml         # PEP 518/621 project metadata & dependencies
-├── uv.lock                # Deterministic dependency lockfile
-├── main.py                # Core steganography engine & CLI entrypoint
-├── stego.jpg              # Sample carrier image
-└── README.md              # Project documentation
-```
 
 ---
 
