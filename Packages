@@ -3,10 +3,10 @@ Version: 0.1.0
 Architecture: amd64
 Maintainer: Kishan Agarwal <kishanagarwal028@gmail.com>
 Filename: pool/main/fsteg_0.1.0_amd64.deb
-Size: 32654168
-MD5sum: c7a00b02ce66b5acb386f8cfe8554093
-SHA1: af0072e6506d44bdafd09f192a7081413bf3052c
-SHA256: eaf512dedd41611410df1616243498b8c047bca6e0aac4c3e7183c6fed295086
+Size: 32652730
+MD5sum: cd829aa74699a9f792e54750cfe1b36a
+SHA1: 3cd3e0a64cfe5bcf6160ba4f8ae359077861c452
+SHA256: 857ac53cf7d13b1de8b15628c328a722236123bd01e137f57f339a1c99ebceb4
 Section: utils
 Priority: optional
 Description: High-fidelity FFT block-based frequency domain steganography CLI
