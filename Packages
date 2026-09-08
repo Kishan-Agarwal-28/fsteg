@@ -12,3 +12,17 @@ Priority: optional
 Description: High-fidelity FFT block-based frequency domain steganography CLI
  Embeds and extracts arbitrary UTF-8 text messages in images via 2D-DFT.
 
+Package: fsteg
+Version: 0.1.1
+Architecture: amd64
+Maintainer: Kishan Agarwal <kishanagarwal028@gmail.com>
+Filename: pool/main/fsteg_0.1.1_amd64.deb
+Size: 32654636
+MD5sum: ffeebaa24a7c3540515ee255a88f28a1
+SHA1: b7cdd483adc0746c8d2dcf05acc4ef57a84a74f6
+SHA256: a9ac971533b6a9fee8d628ab04e3fa90136b32c454f3f70a0627c4861fd286eb
+Section: utils
+Priority: optional
+Description: High-fidelity FFT block-based frequency domain steganography CLI
+ Embeds and extracts arbitrary UTF-8 text messages in images via 2D-DFT.
+
