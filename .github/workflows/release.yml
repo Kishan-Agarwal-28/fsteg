@@ -284,6 +284,7 @@ jobs:
       - name: Attach .deb to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.release.outputs.tag }}
           files: ${{ env.DEB_FILE }}
 
       - name: Upload .deb Artifact for APT Repo
@@ -359,6 +360,7 @@ jobs:
       - name: Attach Homebrew Formula to Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.release.outputs.tag }}
           files: fsteg.rb
 
       - name: Push to homebrew-tap repository
@@ -393,8 +395,9 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ needs.release.outputs.version }}"
-          $sha = (Get-Content "artifacts\${{ env.BIN_NAME }}-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip.sha256").Trim().Split()[0]
-          $url = "https://github.com/${{ github.repository }}/releases/download/v$version/${{ env.BIN_NAME }}-v$version-x86_64-pc-windows-msvc.zip"
+          $tag = "${{ needs.release.outputs.tag }}"
+          $sha = (Get-Content "artifacts\${{ env.BIN_NAME }}-$tag-x86_64-pc-windows-msvc.zip.sha256").Trim().Split()[0]
+          $url = "https://github.com/${{ github.repository }}/releases/download/$tag/${{ env.BIN_NAME }}-$tag-x86_64-pc-windows-msvc.zip"
           
           New-Item -ItemType Directory -Path "chocolatey\tools" -Force | Out-Null
           Copy-Item "packaging\chocolatey\fsteg.nuspec" -Destination "chocolatey\fsteg.nuspec"
@@ -410,6 +413,7 @@ jobs:
       - name: Attach .nupkg to Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.release.outputs.tag }}
           files: dist-choco/*.nupkg
 
       - name: Push to Chocolatey Community
@@ -450,6 +454,7 @@ jobs:
       - name: Attach Scoop Manifest to Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.release.outputs.tag }}
           files: fsteg.json
 
   # ─── 8. WinGet Manifest ────────────────────────────────────────────────────
@@ -479,6 +484,7 @@ jobs:
       - name: Attach WinGet Manifest to Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.release.outputs.tag }}
           files: fsteg.yaml
 
   # ─── 9. Arch Linux (Pacman PKGBUILD) ───────────────────────────────────────
@@ -510,4 +516,5 @@ jobs:
       - name: Attach PKGBUILD to Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.release.outputs.tag }}
           files: PKGBUILD
