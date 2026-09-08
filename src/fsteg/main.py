@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-FFT Block Steganography — hide text inside images
-==================================================
+fsteg — FFT Block Steganography: Hide text inside images
+========================================================
 Hides or extracts a UTF-8 text message by quantising the magnitudes of
 mid-frequency DFT coefficients inside every non-overlapping 8×8 block of
 the image's luma (Y) channel.
@@ -19,16 +19,14 @@ Key features
 Usage
 -----
   Embed:
-      python fft_steg.py embed  cover.png "Your secret message" stego.png
-      python fft_steg.py embed  cover.png "$(cat secret.txt)"  stego.png
+      fsteg embed cover.png "Your secret message" stego.png
+      fsteg embed cover.png "$(cat secret.txt)" stego.png
 
   Extract:
-      python fft_steg.py extract stego.png
+      fsteg extract stego.png
 
   Capacity check (see how many bytes an image can hold):
-      python fft_steg.py capacity image.png
-
-Dependencies: Pillow, numpy   (pip install Pillow numpy)
+      fsteg capacity image.png
 """
 
 import sys
@@ -269,6 +267,7 @@ def capacity(image_path: str) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
+        prog="fsteg",
         description="FFT block steganography — hide text inside images.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,

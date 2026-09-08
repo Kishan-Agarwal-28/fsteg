@@ -293,18 +293,18 @@ pip install -e .
 
 ## 💻 CLI Reference & Usage
 
-`main.py` provides a clean command-line interface with three primary subcommands:
+`fsteg` provides a clean command-line interface with three primary subcommands:
 
 ```
-usage: main.py [-h] {embed,extract,capacity} ...
+usage: fsteg [-h] {embed,extract,capacity} ...
 ```
 
 ### 1. Check Image Capacity
 Determine the exact number of bytes a carrier image can accommodate before attempting to embed:
 
 ```bash
-# Usage: python main.py capacity <image_path>
-python main.py capacity cover.png
+# Usage: fsteg capacity <image_path>
+fsteg capacity cover.png
 ```
 
 **Example Output:**
@@ -322,17 +322,17 @@ Embed a string or file content into a cover image and write the resulting stego 
 
 #### Single-line string:
 ```bash
-# Usage: python main.py embed <cover_image> "<message>" <output_image>
-python main.py embed cover.png "Project Titan: Launch window confirmed for 0400 UTC." stego.png
+# Usage: fsteg embed <cover_image> "<message>" <output_image>
+fsteg embed cover.png "Project Titan: Launch window confirmed for 0400 UTC." stego.png
 ```
 
 #### Multi-line text or file contents:
 ```bash
 # Linux / macOS (Bash):
-python main.py embed cover.png "$(cat classified_brief.txt)" stego.png
+fsteg embed cover.png "$(cat classified_brief.txt)" stego.png
 
 # Windows (PowerShell):
-python main.py embed cover.png (Get-Content -Raw classified_brief.txt) stego.png
+fsteg embed cover.png (Get-Content -Raw classified_brief.txt) stego.png
 ```
 
 **Example Output:**
@@ -350,8 +350,8 @@ python main.py embed cover.png (Get-Content -Raw classified_brief.txt) stego.png
 Recover and verify the concealed payload from a stego image:
 
 ```bash
-# Usage: python main.py extract <stego_image>
-python main.py extract stego.png
+# Usage: fsteg extract <stego_image>
+fsteg extract stego.png
 ```
 
 **Example Output:**
@@ -368,7 +368,7 @@ Project Titan: Launch window confirmed for 0400 UTC.
 You can also import `fsteg` as a module directly inside your Python projects or automated scripts:
 
 ```python
-from main import embed, extract, capacity
+from fsteg import embed, extract, capacity
 
 # 1. Inspect image hiding headroom
 capacity("carrier.png")
@@ -425,7 +425,7 @@ This step discards subtle high- and mid-frequency fluctuations to minimize file 
 **Fix:** Force UTF-8 encoding in Python before running:
 ```powershell
 $env:PYTHONIOENCODING="utf-8"
-python main.py extract stego.png
+fsteg extract stego.png
 ```
 Or switch console code page: `chcp 65001`.
 
@@ -433,7 +433,7 @@ Or switch console code page: `chcp 65001`.
 
 ### Q: `ValueError: Message too long (...)`
 **Cause:** The message byte size exceeds the image's capacity.  
-**Fix:** Run `python main.py capacity <image>` to check the limits. Use a higher-resolution cover image or compress the payload (e.g., `gzip`) before embedding.
+**Fix:** Run `fsteg capacity <image>` to check the limits. Use a higher-resolution cover image or compress the payload (e.g., `gzip`) before embedding.
 
 ---
 
