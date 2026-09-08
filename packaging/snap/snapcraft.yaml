@@ -1,0 +1,29 @@
+name: fsteg
+base: core22
+version: 'git'
+summary: High-fidelity FFT block-based frequency domain steganography CLI
+description: |
+  fsteg embeds arbitrary UTF-8 text messages inside digital images by quantising
+  the magnitude spectrum of mid-frequency Discrete Fourier Transform (DFT)
+  coefficients across non-overlapping 8x8 blocks of the image's luma (Y) channel.
+
+grade: stable
+confinement: strict
+
+apps:
+  fsteg:
+    command: bin/fsteg
+    plugs:
+      - home
+      - removable-media
+
+parts:
+  fsteg:
+    plugin: python
+    source: .
+    python-requirements:
+      - pyproject.toml
+    build-packages:
+      - python3-pip
+      - python3-setuptools
+      - python3-wheel

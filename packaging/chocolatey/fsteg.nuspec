@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>fsteg</id>
+    <version>0.1.0</version>
+    <packageSourceUrl>https://github.com/Kishan-Agarwal-28/fsteg</packageSourceUrl>
+    <owners>Kishan Agarwal</owners>
+    <title>fsteg</title>
+    <authors>Kishan Agarwal</authors>
+    <projectUrl>https://github.com/Kishan-Agarwal-28/fsteg</projectUrl>
+    <licenseUrl>https://github.com/Kishan-Agarwal-28/fsteg/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/Kishan-Agarwal-28/fsteg</projectSourceUrl>
+    <docsUrl>https://github.com/Kishan-Agarwal-28/fsteg#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/Kishan-Agarwal-28/fsteg/issues</bugTrackerUrl>
+    <tags>fsteg steganography cli cryptography fft dft security image-processing</tags>
+    <summary>High-fidelity FFT block-based frequency domain steganography CLI &amp; library</summary>
+    <description>
+      fsteg embeds arbitrary UTF-8 text messages inside digital images by quantising the magnitude spectrum of mid-frequency Discrete Fourier Transform (DFT) coefficients across non-overlapping 8x8 blocks of the image's luma (Y) channel.
+    </description>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

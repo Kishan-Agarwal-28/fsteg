@@ -1,10 +1,71 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "ctf"
+name = "fsteg"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+description = "High-fidelity FFT block-based frequency domain steganography CLI & library"
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Kishan Agarwal", email = "kishanagarwal028@gmail.com" },
+]
+keywords = [
+    "steganography",
+    "image",
+    "block",
+    "fft",
+    "dft",
+    "frequency-domain",
+    "security",
+    "cli",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Security",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = [
     "numpy>=2.4.6",
     "pillow>=12.3.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Kishan-Agarwal-28/fsteg"
+Repository = "https://github.com/Kishan-Agarwal-28/fsteg.git"
+Issues = "https://github.com/Kishan-Agarwal-28/fsteg/issues"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+fsteg = "fsteg.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fsteg"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

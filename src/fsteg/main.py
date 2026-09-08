@@ -38,6 +38,13 @@ import argparse
 import numpy as np
 from PIL import Image
 
+if sys.platform.startswith("win") and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # ── tunables ───────────────────────────────────────────────────────────────────
 STEP        = 32      # quantisation step (must stay fixed between embed/extract)
 END_MARKER  = b"\x00\xFF\x00\xFF\xDE\xAD\xBE\xEF"  # 8-byte payload sentinel
@@ -308,3 +315,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

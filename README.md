@@ -207,46 +207,87 @@ $$\text{Capacity}_{\text{usable}} \approx \left\lfloor\frac{\text{Capacity}_{\te
 
 ---
 
+---
+
 ## 🚀 Installation & Setup
 
-### Prerequisites
-- **Python 3.11+**
-- Packages: `numpy >= 2.4.6`, `pillow >= 12.3.0`
+### ⚡ One-Line Standalone Install (No Python Required)
 
-### Option 1: Using `uv` (Recommended)
-[`uv`](https://github.com/astral-sh/uv) is an extremely fast Python package and project manager.
-
+#### Linux & macOS:
 ```bash
-# Clone the repository
+curl -fsSL https://raw.githubusercontent.com/Kishan-Agarwal-28/fsteg/main/scripts/install.sh | bash
+```
+
+#### Windows (PowerShell):
+```powershell
+irm https://raw.githubusercontent.com/Kishan-Agarwal-28/fsteg/main/scripts/install.ps1 | iex
+```
+
+---
+
+### 📦 System Package Managers
+
+#### Python Package Index (PyPI):
+```bash
+pip install fsteg
+# or via uv:
+uv tool install fsteg
+```
+
+#### Homebrew (macOS & Linux):
+```bash
+brew tap Kishan-Agarwal-28/tap
+brew install fsteg
+```
+
+#### Chocolatey (Windows):
+```powershell
+choco install fsteg
+```
+
+#### Scoop (Windows):
+```powershell
+scoop install https://github.com/Kishan-Agarwal-28/fsteg/releases/latest/download/fsteg.json
+```
+
+#### Windows Package Manager (WinGet):
+```powershell
+winget install fsteg
+```
+
+#### Debian / Ubuntu (APT):
+```bash
+# Download latest .deb from GitHub Releases
+curl -LO https://github.com/Kishan-Agarwal-28/fsteg/releases/latest/download/fsteg_amd64.deb
+sudo dpkg -i fsteg_amd64.deb
+```
+
+#### Arch Linux (AUR / Pacman):
+```bash
+# Using makepkg from release PKGBUILD:
+curl -LO https://github.com/Kishan-Agarwal-28/fsteg/releases/latest/download/PKGBUILD
+makepkg -si
+```
+
+---
+
+### 🛠️ Developer Setup (from source)
+
+#### Using `uv`:
+```bash
 git clone https://github.com/Kishan-Agarwal-28/fsteg.git
 cd fsteg
-
-# Sync dependencies into an isolated virtualenv
 uv sync
+uv run fsteg --help
 ```
 
-You can now run commands directly via `uv run`:
+#### Using `pip` and `venv`:
 ```bash
-uv run main.py --help
-```
-
-### Option 2: Using Standard `pip` and `venv`
-```bash
-# Clone the repository
 git clone https://github.com/Kishan-Agarwal-28/fsteg.git
 cd fsteg
-
-# Create and activate virtual environment
 python -m venv .venv
-
-# On Linux/macOS:
-source .venv/bin/activate
-
-# On Windows (PowerShell):
-.venv\Scripts\Activate.ps1
-
-# Install required dependencies
-pip install numpy pillow
+source .venv/bin/activate  # On Windows: .venv\Scripts\Activate.ps1
+pip install -e .
 ```
 
 ---

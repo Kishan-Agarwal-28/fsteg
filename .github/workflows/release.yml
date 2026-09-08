@@ -1,0 +1,487 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      publish_to_pypi:
+        description: "Publish package to PyPI"
+        type: boolean
+        default: true
+        required: true
+
+env:
+  BIN_NAME: fsteg
+  PACKAGE_NAME: fsteg
+  RELEASE: "true"
+
+permissions:
+  contents: write   # Needed to create GitHub releases & upload assets
+  id-token: write   # Needed for PyPI Trusted Publishing
+
+jobs:
+  # ─── 0. Run Tests ───────────────────────────────────────────────────────────
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --extra test
+
+      - name: Run test suite
+        run: uv run pytest -v
+
+  # ─── 1. Publish to PyPI (with Manual Approval Gate) ──────────────────────────
+  pypi:
+    name: Publish to PyPI
+    needs: test
+    if: github.event_name != 'workflow_dispatch' || inputs.publish_to_pypi
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+      url: https://pypi.org/p/fsteg
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Publish to PyPI
+        run: uv publish
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pypi-dist
+          path: dist/*
+
+  # ─── 2. Build Standalone Binaries ───────────────────────────────────────────
+  build-binaries:
+    name: Build Binary — ${{ matrix.target }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+            archive: tar.gz
+            exe: fsteg
+
+          # Linux ARM64
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04
+            archive: tar.gz
+            exe: fsteg
+            arm64: true
+
+          # macOS Intel (x86_64)
+          - target: x86_64-apple-darwin
+            os: macos-13
+            archive: tar.gz
+            exe: fsteg
+
+          # macOS Apple Silicon (arm64)
+          - target: aarch64-apple-darwin
+            os: macos-14
+            archive: tar.gz
+            exe: fsteg
+
+          # Windows x86_64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+            exe: fsteg.exe
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        if: "!matrix.arm64"
+        run: uv python install 3.11
+
+      # ── Linux ARM64 cross build using QEMU & Docker ──
+      - name: Build binary (Linux ARM64 via QEMU)
+        if: matrix.arm64
+        run: |
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker run --rm -v "${PWD}:/app" -w /app arm64v8/python:3.11-slim bash -c "
+            apt-get update && apt-get install -y binutils gcc
+            pip install --no-cache-dir pyinstaller numpy pillow
+            pyinstaller --onefile --name fsteg src/fsteg/main.py --clean
+          "
+
+      # ── Native build (Linux x86_64, macOS, Windows) ──
+      - name: Build binary (Native)
+        if: "!matrix.arm64"
+        run: |
+          uv pip install --system pyinstaller numpy pillow
+          pyinstaller --onefile --name fsteg src/fsteg/main.py --clean
+
+      # ── Package Archive ──
+      - name: Package (tar.gz — Linux/macOS)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          ASSET="${{ env.BIN_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz"
+          cp README.md LICENSE dist/
+          tar -czf "${ASSET}" -C dist "${{ matrix.exe }}" README.md LICENSE
+          echo "ASSET=${ASSET}" >> "$GITHUB_ENV"
+
+      - name: Package (zip — Windows)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $asset = "${{ env.BIN_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.zip"
+          Copy-Item "README.md", "LICENSE" -Destination "dist\"
+          Compress-Archive -Path "dist\${{ matrix.exe }}", "dist\README.md", "dist\LICENSE" -DestinationPath $asset
+          echo "ASSET=$asset" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Compute SHA-256 Checksum
+        shell: bash
+        run: |
+          if command -v sha256sum &>/dev/null; then
+            sha256sum "${ASSET}" | awk '{print $1}' > "${ASSET}.sha256"
+          else
+            shasum -a 256 "${ASSET}" | awk '{print $1}' > "${ASSET}.sha256"
+          fi
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+
+  # ─── 3. Create GitHub Release ───────────────────────────────────────────────
+  release:
+    name: GitHub Release
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    environment: release
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract clean version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/**
+
+  # ─── 4. Build & Publish Debian/Ubuntu .deb (APT) ────────────────────────────
+  apt:
+    name: Package .deb (APT)
+    needs: release
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Linux x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-x86_64-unknown-linux-gnu
+          path: bin-x86_64
+
+      - name: Assemble Debian Package
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          PKG_DIR="fsteg_${VERSION}_amd64"
+          tar -xzf bin-x86_64/*.tar.gz
+          
+          mkdir -p "${PKG_DIR}/DEBIAN"
+          mkdir -p "${PKG_DIR}/usr/bin"
+          mkdir -p "${PKG_DIR}/usr/share/doc/fsteg"
+          
+          install -m 755 fsteg "${PKG_DIR}/usr/bin/fsteg"
+          cp README.md LICENSE "${PKG_DIR}/usr/share/doc/fsteg/"
+          
+          cat <<EOF > "${PKG_DIR}/DEBIAN/control"
+          Package: fsteg
+          Version: ${VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Kishan Agarwal <kishanagarwal028@gmail.com>
+          Description: High-fidelity FFT block-based frequency domain steganography CLI
+           Embeds and extracts arbitrary UTF-8 text messages in images via 2D-DFT.
+          EOF
+          
+          dpkg-deb --build --root-owner-group "${PKG_DIR}"
+          echo "DEB_FILE=${PKG_DIR}.deb" >> "$GITHUB_ENV"
+
+      - name: Attach .deb to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.DEB_FILE }}
+
+      - name: Upload .deb Artifact for APT Repo
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-package
+          path: ${{ env.DEB_FILE }}
+
+  # ─── 4.5. Host APT Repository on GitHub Pages ──────────────────────────────
+  apt-repo:
+    name: Update gh-pages APT Repository
+    needs: apt
+    runs-on: ubuntu-latest
+    environment: release
+    continue-on-error: true
+    steps:
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Download .deb package
+        uses: actions/download-artifact@v4
+        with:
+          name: debian-package
+          path: pool/main/
+
+      - name: Generate APT repository metadata
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev apt-utils
+          dpkg-scanpackages --multiversion pool/ > Packages
+          gzip -k -f Packages
+          apt-ftparchive release . > Release
+
+      - name: Commit and push APT repo
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update APT repository with fsteg ${{ needs.release.outputs.version }}"
+          branch: gh-pages
+
+  # ─── 5. Update Homebrew Formula ────────────────────────────────────────────
+  homebrew:
+    name: Generate Homebrew Formula
+    needs: release
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate Homebrew Formula
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          ARM64_DARWIN_SHA=$(cat artifacts/fsteg-v${VERSION}-aarch64-apple-darwin.tar.gz.sha256)
+          X86_64_DARWIN_SHA=$(cat artifacts/fsteg-v${VERSION}-x86_64-apple-darwin.tar.gz.sha256)
+          AARCH64_LINUX_SHA=$(cat artifacts/fsteg-v${VERSION}-aarch64-unknown-linux-gnu.tar.gz.sha256)
+          X86_64_LINUX_SHA=$(cat artifacts/fsteg-v${VERSION}-x86_64-unknown-linux-gnu.tar.gz.sha256)
+          
+          sed -e "s/__VERSION__/${VERSION}/g" \
+              -e "s/__ARM64_DARWIN_SHA256__/${ARM64_DARWIN_SHA}/g" \
+              -e "s/__X86_64_DARWIN_SHA256__/${X86_64_DARWIN_SHA}/g" \
+              -e "s/__AARCH64_LINUX_SHA256__/${AARCH64_LINUX_SHA}/g" \
+              -e "s/__X86_64_LINUX_SHA256__/${X86_64_LINUX_SHA}/g" \
+              packaging/homebrew/fsteg.rb.tpl > fsteg.rb
+
+      - name: Attach Homebrew Formula to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: fsteg.rb
+
+      - name: Push to homebrew-tap repository
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        uses: mislav/bump-homebrew-formula-action@v3
+        with:
+          formula-name: fsteg
+          formula-path: Formula/fsteg.rb
+          homebrew-tap: Kishan-Agarwal-28/homebrew-tap
+          tag-name: ${{ github.ref_name }}
+          download-url: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/fsteg-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+  # ─── 6. Chocolatey Package ─────────────────────────────────────────────────
+  chocolatey:
+    name: Package & Publish Chocolatey
+    needs: release
+    runs-on: windows-latest
+    environment: release
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-x86_64-pc-windows-msvc
+          path: artifacts
+
+      - name: Build Chocolatey Package
+        shell: pwsh
+        run: |
+          $version = "${{ needs.release.outputs.version }}"
+          $sha = (Get-Content "artifacts\${{ env.BIN_NAME }}-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip.sha256").Trim().Split()[0]
+          $url = "https://github.com/${{ github.repository }}/releases/download/v$version/${{ env.BIN_NAME }}-v$version-x86_64-pc-windows-msvc.zip"
+          
+          New-Item -ItemType Directory -Path "chocolatey\tools" -Force | Out-Null
+          Copy-Item "packaging\chocolatey\fsteg.nuspec" -Destination "chocolatey\fsteg.nuspec"
+          Copy-Item "packaging\chocolatey\tools\chocolateyUninstall.ps1" -Destination "chocolatey\tools\chocolateyUninstall.ps1"
+          
+          (Get-Content "packaging\chocolatey\tools\chocolateyInstall.ps1.tpl") `
+            -replace '__URL__', $url `
+            -replace '__SHA256__', $sha |
+            Set-Content "chocolatey\tools\chocolateyInstall.ps1"
+          
+          choco pack chocolatey\fsteg.nuspec --version $version --outputdirectory dist-choco
+
+      - name: Attach .nupkg to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-choco/*.nupkg
+
+      - name: Push to Chocolatey Community
+        if: env.CHOCOLATEY_API_KEY != ''
+        shell: pwsh
+        run: |
+          $version = "${{ needs.release.outputs.version }}"
+          choco push "dist-choco\fsteg.$version.nupkg" `
+            --source https://push.chocolatey.org/ `
+            --api-key ${{ secrets.CHOCOLATEY_API_KEY }}
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
+  # ─── 7. Scoop Manifest ─────────────────────────────────────────────────────
+  scoop:
+    name: Generate Scoop Manifest
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-x86_64-pc-windows-msvc
+          path: artifacts
+
+      - name: Generate Scoop Manifest
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          SHA=$(cat artifacts/fsteg-v${VERSION}-x86_64-pc-windows-msvc.zip.sha256 | awk '{print $1}')
+          
+          sed -e "s/__VERSION__/${VERSION}/g" \
+              -e "s/__SHA256__/${SHA}/g" \
+              packaging/scoop/fsteg.json.tpl > fsteg.json
+
+      - name: Attach Scoop Manifest to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: fsteg.json
+
+  # ─── 8. WinGet Manifest ────────────────────────────────────────────────────
+  winget:
+    name: Generate WinGet Manifest
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-x86_64-pc-windows-msvc
+          path: artifacts
+
+      - name: Generate WinGet Manifest
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          SHA=$(cat artifacts/fsteg-v${VERSION}-x86_64-pc-windows-msvc.zip.sha256 | awk '{print $1}')
+          
+          sed -e "s/__VERSION__/${VERSION}/g" \
+              -e "s/__SHA256__/${SHA}/g" \
+              packaging/winget/fsteg.yaml.tpl > fsteg.yaml
+
+      - name: Attach WinGet Manifest to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: fsteg.yaml
+
+  # ─── 9. Arch Linux (Pacman PKGBUILD) ───────────────────────────────────────
+  pacman:
+    name: Generate Arch Linux PKGBUILD
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate PKGBUILD
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          X86_SHA=$(cat artifacts/fsteg-v${VERSION}-x86_64-unknown-linux-gnu.tar.gz.sha256 | awk '{print $1}')
+          ARM_SHA=$(cat artifacts/fsteg-v${VERSION}-aarch64-unknown-linux-gnu.tar.gz.sha256 | awk '{print $1}')
+          
+          sed -e "s/__VERSION__/${VERSION}/g" \
+              -e "s/__X86_64_SHA__/${X86_SHA}/g" \
+              -e "s/__AARCH64_SHA__/${ARM_SHA}/g" \
+              packaging/arch/PKGBUILD.tpl > PKGBUILD
+
+      - name: Attach PKGBUILD to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: PKGBUILD
