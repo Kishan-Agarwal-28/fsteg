@@ -136,7 +136,7 @@ jobs:
         if: matrix.arm64
         run: |
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          docker run --rm -v "${PWD}:/app" -w /app arm64v8/python:3.11-slim bash -c "
+          docker run --platform linux/arm64 --rm -v "${PWD}:/app" -w /app python:3.11-slim bash -c "
             apt-get update && apt-get install -y binutils gcc
             pip install --no-cache-dir pyinstaller numpy pillow
             pyinstaller --onefile --name fsteg src/fsteg/main.py --clean
@@ -146,8 +146,9 @@ jobs:
       - name: Build binary (Native)
         if: "!matrix.arm64"
         run: |
-          uv pip install --system pyinstaller numpy pillow
-          pyinstaller --onefile --name fsteg src/fsteg/main.py --clean
+          uv venv
+          uv pip install pyinstaller numpy pillow
+          uv run pyinstaller --onefile --name fsteg src/fsteg/main.py --clean
 
       # ── Package Archive ──
       - name: Package (tar.gz — Linux/macOS)
